@@ -30,6 +30,22 @@ public class MatrixGraph {
         this.degree = new int[initialCapacity];
     }
 
+    public MatrixGraph(int[][] matrix) {
+        this.order = matrix.length;
+        this.mat = matrix;
+        this.degree = new int[order];
+        int ds = 0;
+        for(int i = 0; i < order; i++) {
+            int sum = 0;
+            for(int j = 0; j < order; j++) {
+                sum+=mat[i][j];
+            }
+            degree[i]=sum;
+            ds+=sum;
+        }
+        this.size = ds/2; //degree-sum theorem - size is half the degree sum (and degree sum will never be odd)
+    }
+
     /**
      * Add a single vertex to the graph.
      * @return {@code true} if the vertex was added successfully, {@code false} otherwise.
@@ -105,6 +121,7 @@ public class MatrixGraph {
      */
     public boolean isEulerian(boolean path) {
         int numOdd = 0;
+        System.out.println(Arrays.toString(degree));
         for(int i = 0; i < order; i++) {
             if(degree[i] % 2 != 0) {
                 if (path && numOdd < 2) {
@@ -155,48 +172,92 @@ public class MatrixGraph {
     //this shouldn't be that hard to generalize tbh - make saveRemoved a 2d array and run through every combination of x vertices (for some x) and see if components>=x+1
     //would have to return an int[] with length x
     /**
-     * If the graph is tough.
+     * If the graph is 1-tough (it fulfills the G \ S condition).
      * @return {@code 1} if the graph is tough, or if not the negative index of some cut vertex.
      */
-    public int isOneTough() {
-        int[] saveRemoved;
-        int deg;
-        for(int i = 0; i < order; i++) {
-            deg = degree[i];
-            saveRemoved = new int[deg]; //literally just adjacency list of vertex i (lol)
-            int n = 0;
-            for(int j = 0; j < order; j++) {
-                if(mat[i][j] > 0) {
-                    saveRemoved[n++] = j;
-                    mat[i][j] = 0;
-                    mat[j][i] = 0; //break
-                    degree[i]--;
-                    degree[j]--;
-                    if(n == deg) {
-                        break;
+    public int[] isTough() {
+        for(int i = 0; i < order/2; i++) {
+            int[] out = isTough(i);
+            if(out != null) {
+                return out;
+            }
+        }
+        return null;
+    }
+
+    public int[] isTough(int num) {
+        if(num < 1) {
+            return null;
+        }
+
+        //remove all num-tuples of vertices
+        int[] removing = new int[num];
+        return recurseTough(removing, num, 0);
+    }
+
+    private int[] recurseTough(int[] removing, int num, int l) {
+//        System.out.println("Recursing tough for " + Arrays.toString(removing) + " (ignore at and after loc #"+l+")");
+        if(l == num) {
+//            System.out.println("Testing tough for " + Arrays.toString(removing));
+            int[][] saveRemoved = new int[num][];
+            for(int i = 0; i < num; i++) {
+                saveRemoved[i] = new int[degree[removing[i]]];
+            }
+            for (int id = 0; id < num; id++) {
+                int n = 0;
+                for (int x = 0; x < order; x++) {
+                    if (mat[removing[id]][x] > 0) {
+                        saveRemoved[id][n++] = x;
+                        mat[removing[id]][x] = 0;
+                        mat[x][removing[id]] = 0; //break
+                        degree[removing[id]]--;
+                        degree[x]--;
                     }
                 }
             }
-            int components = numComponents();
-            for(int j = 0; j < deg; j++) {
-                putEdge(i, saveRemoved[j]); //repair
+            boolean notTough = numComponents()-num > num;
+//            System.out.println("Was tough when removing: " + !notTough + " (" + (numComponents()-num) + "?>" + num+")");
+//            System.out.println(Arrays.toString(new EigenvalueDecomposition(this.mat, this.degree, this.order).getRealEigenvalues()));
+//            System.out.println(this.toString());
+            //repair them
+            for (int id = 0; id < num; id++) {
+                for (int x = 0; x < saveRemoved[id].length; x++) {
+                    putEdge(removing[id], saveRemoved[id][x]);
+                }
             }
-            if(components >= 2) {
-                System.out.println("Removing vertex " + i + " disconnected the graph.");
-                return -i;
+            return notTough ? removing : null;
+        } else {
+            for(int i = (l == 0 ? 0 : removing[l-1]+1); i < order; i++) {
+                removing[l] = i;
+                int[] next = recurseTough(removing, num,l+1);
+                if(next != null) {
+                    return next;
+                }
             }
+            return null;
         }
-        return 1;
     }
 
+
+
     public int numComponents() {
-        return 1; //TODO;
         //the number of components of a graph given an n-by-n adjacency matrix is equal to the multiplicity of the eigenvalue 0
         /*
         https://math.stackexchange.com/questions/324427/how-to-find-the-multiplicity-of-eigenvalues
         https://textbooks.math.gatech.edu/ila/eigenvectors.html
         fuck
          */
+        double[] eigen = new EigenvalueDecomposition(this.mat, this.degree, this.order).getRealEigenvalues();
+        if(eigen.length == 0) {
+            return 0;
+        }
+        //count zeroes (multiplicity)
+        for(int i = 0; i < eigen.length; i++) {
+            if(Math.round(eigen[i]) != 0) {
+                return i;
+            }
+        }
+        return eigen.length; //error? //probably not because i think this would happen with the empty graph
     }
 
     private void dfsUtil(int start, boolean[] visited)

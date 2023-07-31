@@ -15,9 +15,9 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>org.la4j</groupId>
-            <artifactId>la4j</artifactId>
-            <version>0.6.0</version>
+            <groupId>gov.nist.math</groupId>
+            <artifactId>jama</artifactId>
+            <version>1.0.3</version>
         </dependency>
     </dependencies>
 
