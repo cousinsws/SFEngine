@@ -1,4 +1,4 @@
-package me.cousinss;
+package main.java.me.cousinss;
 
 public class InputUtil {
 

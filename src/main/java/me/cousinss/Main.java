@@ -1,9 +1,9 @@
-package me.cousinss;
+package main.java.me.cousinss;
 
 import java.util.Arrays;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void go(String[] args) {
         MatrixGraph m = new MatrixGraph(InputUtil.fromTriangular(
                 "111100",
                 "11010",
