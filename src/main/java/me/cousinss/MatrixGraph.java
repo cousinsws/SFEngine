@@ -1,5 +1,6 @@
 package main.java.me.cousinss;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class MatrixGraph {
@@ -9,6 +10,7 @@ public class MatrixGraph {
     private int size;
 
     private static final double LOG_TWO = 0.693147181;
+    private static final double ZERO_POSITIVE_ERROR = 0.00001;
     /**
      * A positive value denoting the sensitivity of the automatic initial capacity
      * to bump up one level (power of two) based on how close the order is to a power of two.
@@ -176,7 +178,7 @@ public class MatrixGraph {
      * @return {@code 1} if the graph is tough, or if not the negative index of some cut vertex.
      */
     public int[] isTough() {
-        for(int i = 0; i < order/2; i++) {
+        for(int i = 1; i < order/2; i++) {
             int[] out = isTough(i);
             if(out != null) {
                 return out;
@@ -248,20 +250,20 @@ public class MatrixGraph {
         fuck
          */
         double[] eigen = new EigenvalueDecomposition(this.mat, this.degree, this.order).getRealEigenvalues();
+//        System.out.println(Arrays.toString(eigen));
         if(eigen.length == 0) {
             return 0;
         }
         //count zeroes (multiplicity)
         for(int i = 0; i < eigen.length; i++) {
-            if(Math.round(eigen[i]) != 0) {
+            if(Math.abs(eigen[i]) > ZERO_POSITIVE_ERROR) {
                 return i;
             }
         }
         return eigen.length; //error? //probably not because i think this would happen with the empty graph
     }
 
-    private void dfsUtil(int start, boolean[] visited)
-    {
+    void dfsUtil(int start, boolean[] visited) {
         visited[start] = true;
         int found = 0;
         for (int i = 0; i < order; i++) {
@@ -304,6 +306,27 @@ public class MatrixGraph {
 
     @Override
     public String toString() {
-        return Arrays.deepToString(mat);
+        return toString(false);
+    }
+
+    public String toString(boolean list) {
+        String out = "";
+        if(!list) {
+            for(int i = 0; i < this.order; i++) {
+                out+=Arrays.toString(mat[i]) + (i == this.order - 1 ? "" : ",\n");
+            }
+            return out;
+        }
+        ArrayList<Integer>[] lists = new ArrayList[this.order];
+        for(int i = 0; i < this.order; i++) {
+            lists[i] = new ArrayList<Integer>();
+            for(int j = 0; j < this.order; j++) {
+                if(mat[i][j]!=0) {
+                    lists[i].add(j);
+                }
+            }
+            out += "(" + i + ") " + lists[i].toString() + (i == this.order - 1 ? "" : ",\n");
+        }
+        return out;
     }
 }
