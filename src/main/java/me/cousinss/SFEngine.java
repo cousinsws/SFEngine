@@ -1,10 +1,15 @@
 package main.java.me.cousinss;
 
+import Jama.Matrix;
 import javafx.application.Application;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
@@ -28,6 +33,9 @@ public class SFEngine extends Application  {
         Color.CRIMSON
     };
 
+    private static final int EDGE_Z = 10;
+    private static final int V_Z = 1;
+
     public static void main(String[] args) {
         System.out.println("Hello world");
         launch(args);
@@ -37,6 +45,10 @@ public class SFEngine extends Application  {
     private List<Vertex> vertices;
     private Set<Edge> edges;
     private Text hud;
+    private Line newEdge;
+    private int newEdgeV;
+
+    private MatrixGraph m;
 
     @Override
     public void start(Stage stage) {
@@ -46,8 +58,24 @@ public class SFEngine extends Application  {
         root.setTop(hud);
         stage.setScene(new Scene(root, 600, 600));
         stage.show();
-
-        MatrixGraph m = new MatrixGraph(10);
+        newEdge = null;
+        root.setOnMouseClicked(e -> {
+            if(isEdgeCreation(e)) {
+                checkFinishEdge(e);
+            }
+        });
+        root.setOnMouseReleased(e -> {
+            if(newEdge != null) {
+                checkFinishEdge(e);
+            }
+        });
+        root.setOnMouseMoved(e -> {
+           if(newEdge != null) {
+               newEdge.setEndX(e.getX());
+               newEdge.setEndY(e.getY());
+           }
+        });
+        m = new MatrixGraph(10);
         vertices = new ArrayList<>();
         edges = new LinkedHashSet<>();
         for(int i = 0; i < m.getOrder(); i++) {
@@ -62,12 +90,18 @@ public class SFEngine extends Application  {
         }
         for(Edge e : edges) {
             root.getChildren().add(e);
+            e.setViewOrder(EDGE_Z);
             m.putEdge(e.v1, e.v2);
         }
 //        System.out.println(m.toString(true));
         for(Vertex v : vertices) {
             root.getChildren().add(v);
+            v.setViewOrder(V_Z);
         }
+        analyzeGraph();
+    }
+
+    private void analyzeGraph() {
         int numComponents = m.numComponents();
         int[] tough = m.isTough();
         hud.setText("Components: " + numComponents +"\nTough: " +
@@ -79,6 +113,45 @@ public class SFEngine extends Application  {
                 vertices.get(tough[i]).setStroke(Color.BLACK);
             }
         }
+    }
+
+    private void checkFinishEdge(MouseEvent e) {
+        if(newEdge == null) {
+            for (int i = 0; i < vertices.size(); i++) {
+                Vertex v = vertices.get(i);
+                if (v.contains(e.getX(), e.getY())) {
+                    newEdge = new Line(v.getCenterX(), v.getCenterY(), e.getX(), e.getY());
+                    newEdge.setViewOrder(EDGE_Z);
+                    root.getChildren().add(newEdge);
+                    newEdgeV = i;
+                    break;
+                }
+            }
+        } else {
+            for(int i = 0; i < vertices.size(); i++) {
+                Vertex v = vertices.get(i);
+                if(v.contains(newEdge.getEndX(), newEdge.getEndY())) {
+                    if(newEdgeV != i) {
+                        Edge ed = new Edge(newEdgeV, i);
+                        if(edges.add(ed)) {
+                            root.getChildren().add(ed);
+                            ed.setViewOrder(EDGE_Z);
+                            m.putEdge(newEdgeV, i);
+                            analyzeGraph();
+                        }
+                    }
+                    root.getChildren().remove(newEdge);
+                    newEdge = null;
+                    newEdgeV = -1;
+
+                    return;
+                }
+            }
+        }
+    }
+
+    private boolean isEdgeCreation(MouseEvent e) {
+        return e.isShiftDown() == true || e.getButton().equals(MouseButton.SECONDARY);
     }
 
     private void colorGroupVertices(MatrixGraph m, int numComponents) {
@@ -104,11 +177,12 @@ public class SFEngine extends Application  {
     }
 
     private class Vertex extends Group {
+        public static final double RADIUS = 10;
         private Circle c;
         private Text t;
         private int id;
         public Vertex(double x, double y, String text, int id) {
-            super(new Circle(10, Color.RED), new Text(text));
+            super(new Circle(RADIUS, Color.RED), new Text(text));
             this.id = id;
             this.c = (Circle) this.getChildren().get(0);
             c.setStrokeWidth(3);
@@ -117,6 +191,9 @@ public class SFEngine extends Application  {
             this.setCenterX(x);
             this.setCenterY(y);
             this.setOnMouseDragged(e -> {
+                if(newEdge != null) {
+                    return;
+                }
                 this.setCenterX(e.getX());
                 this.setCenterY(e.getY());
                 for(Edge d : edges) {
@@ -127,6 +204,17 @@ public class SFEngine extends Application  {
                         d.setEndX(e.getX());
                         d.setEndY(e.getY());
                     }
+                }
+            });
+            this.setOnMouseClicked(e -> {
+                if(e.isControlDown()) {
+                    ((Pane) this.getParent()).getChildren().remove(this);
+                    for(Edge d : edges) {
+                        if(d.v1 == this.id || d.v2 == this.id) {
+                            d.remove();
+                        }
+                    }
+                    //todo: matrix.remove(this), need to add a Map<int vertexName - > vertexId (in array) so removing vertices doesnt fuck up shit on gui
                 }
             });
         }
@@ -164,6 +252,17 @@ public class SFEngine extends Application  {
             this.setStroke(Color.BLUE);
             this.v1 = v1;
             this.v2 = v2;
+            this.setOnMouseClicked(e -> {
+                if(e.isControlDown()) {
+                    this.remove();
+                }
+            });
+        }
+
+        public void remove() {
+            ((Pane) this.getParent()).getChildren().remove(this);
+            m.removeEdge(this.v1, this.v2);
+            analyzeGraph();
         }
 
         @Override
