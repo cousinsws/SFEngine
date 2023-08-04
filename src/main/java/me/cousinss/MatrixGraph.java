@@ -87,6 +87,13 @@ public class MatrixGraph {
         return true;
     }
 
+    protected void putEdgeForce(int v1, int v2) {
+        mat[v1][v2] = 1;
+        mat[v2][v1] = 1;
+        degree[v1]++;
+        degree[v2]++;
+    }
+
     public boolean removeEdge(int v1, int v2) {
         if(v1 < 0 || v1 >= order || v2 < 0 || v2 >= order) {
             return false;
@@ -100,6 +107,13 @@ public class MatrixGraph {
             return true;
         }
         return false;
+    }
+
+    protected void removeEdgeForce(int v1, int v2) {
+        mat[v1][v2] = 0;
+        mat[v2][v1] = 0;
+        degree[v1]--;
+        degree[v2]--;
     }
 
     public int[][] getLaplacian() {
@@ -167,7 +181,7 @@ public class MatrixGraph {
         if(order == 0) {
             return true;
         }
-        int seed = -1;
+        int seed = 0;
         if(allowDots) {
             for (int i = 0; i < order; i++) {
                 if (degree[i] > 0) {
@@ -175,8 +189,6 @@ public class MatrixGraph {
                     break;
                 }
             }
-        } else {
-            seed = 0;
         }
         boolean[] visited = new boolean[order];
         dfsUtil(seed, visited);
@@ -235,10 +247,7 @@ public class MatrixGraph {
                 for (int x = 0; x < order; x++) {
                     if (mat[removing[id]][x] > 0) {
                         saveRemoved[id][n++] = x;
-                        mat[removing[id]][x] = 0;
-                        mat[x][removing[id]] = 0; //break
-                        degree[removing[id]]--;
-                        degree[x]--;
+                        removeEdgeForce(removing[id], x);
                     }
                 }
                 for(; n < saveRemoved[id].length; n++) {
@@ -255,7 +264,7 @@ public class MatrixGraph {
                     if(saveRemoved[id][x] == -1) {
                         break;
                     }
-                    putEdge(removing[id], saveRemoved[id][x]);
+                    putEdgeForce(removing[id], saveRemoved[id][x]);
                 }
             }
 //            if(!equal(save, mat)) {

@@ -1,13 +1,10 @@
 package main.java.me.cousinss;
 
-import Jama.Matrix;
 import javafx.application.Application;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -35,9 +32,9 @@ public class SFEngine extends Application  {
 
     private static final int EDGE_Z = 10;
     private static final int V_Z = 1;
+    private static final double SCROLL_SENSITIVITY = 1;
 
     public static void main(String[] args) {
-        System.out.println("Hello world");
         launch(args);
     }
 
@@ -52,11 +49,12 @@ public class SFEngine extends Application  {
 
     @Override
     public void start(Stage stage) {
-        stage.setTitle("Hello World GUI Test");
+        stage.setTitle("SommerfuglEngine");
         root = new BorderPane();
         hud = new Text("Components: 1\nTough: False");
         root.setTop(hud);
-        stage.setScene(new Scene(root, 600, 600));
+        Scene scene = new Scene(root, 600, 600);
+        stage.setScene(scene);
         stage.show();
         newEdge = null;
         root.setOnMouseClicked(e -> {
@@ -75,6 +73,8 @@ public class SFEngine extends Application  {
                newEdge.setEndY(e.getY());
            }
         });
+        scene.setOnKeyPressed(this::onType);
+        scene.setOnScroll(this::onScroll);
         m = new MatrixGraph(10);
         vertices = new ArrayList<>();
         edges = new LinkedHashSet<>();
@@ -99,6 +99,32 @@ public class SFEngine extends Application  {
             v.setViewOrder(V_Z);
         }
         analyzeGraph();
+
+    }
+
+    private void onType(KeyEvent e) {
+        if(e.getCode() == KeyCode.R) {
+            arrangeRadially(vertices, new Point2D(root.getWidth() / 2, root.getHeight()/2), Math.min(root.getWidth(), root.getHeight())/3.5);
+        }
+    }
+
+    private void onScroll(ScrollEvent e) {
+        if(e.isShiftDown()) {
+            for(Vertex v : vertices) {
+                changeVertexRadius(v, e);
+            }
+        } else {
+            for(Vertex v : vertices) {
+                if(v.contains(e.getX(), e.getY())) {
+                    changeVertexRadius(v, e);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void changeVertexRadius(Vertex v, ScrollEvent e) {
+        v.setRadius(Math.max(4, v.getRadius() + SCROLL_SENSITIVITY*(e.getDeltaY()+e.getDeltaX() > 0 ? 3 : -1)));
     }
 
     private void analyzeGraph() {
@@ -108,10 +134,12 @@ public class SFEngine extends Application  {
 //        System.out.println(Arrays.toString(save) + " -> " + Arrays.toString(m.getDegree()));
 //        int[] tough = null;
         int[] eulerian = m.isEulerian();
-        hud.setText("Components: " + numComponents
+        hud.setText("Order: " + m.getOrder() + " vertices"
+                + "\nSize: " + m.getSize() + " edges"
+                + "\nComponents: " + numComponents
                 +"\nTough: " +
-                (numComponents == 1 ? (tough == null ? "True" :
-                        ("False, Breaking Set: " + Arrays.toString(tough))) : "False (Disconnected)")
+                    (numComponents == 1 ? (tough == null ? "True" :
+                    ("False, Breaking Set: " + Arrays.toString(tough))) : "False (Disconnected)")
                 +"\nEulerian: " + (eulerian == null ? "True" : ((numComponents == 1 ? Arrays.toString(eulerian) : "False (Disconnected)")))
         );
         colorGroupVertices(m, numComponents);
@@ -217,7 +245,7 @@ public class SFEngine extends Application  {
             this.setCenterX(x);
             this.setCenterY(y);
             this.setOnMouseDragged(e -> {
-                if(newEdge != null) {
+                if(newEdge != null || isEdgeCreation(e)) {
                     return;
                 }
                 this.setCenterX(e.getX());
@@ -244,6 +272,14 @@ public class SFEngine extends Application  {
                     //todo: matrix.remove(this), need to add a Map<int vertexName - > vertexId (in array) so removing vertices doesnt fuck up shit on gui
                 }
             });
+        }
+
+        public void setRadius(double rad) {
+            this.c.setRadius(rad);
+        }
+
+        public double getRadius() {
+            return this.c.getRadius();
         }
 
         public double getCenterX() {
@@ -287,7 +323,9 @@ public class SFEngine extends Application  {
         }
 
         public void remove() {
-            ((Pane) this.getParent()).getChildren().remove(this);
+            try {
+                ((Pane) this.getParent()).getChildren().remove(this);
+            } catch (IndexOutOfBoundsException e) {}
             m.removeEdge(this.v1, this.v2);
             analyzeGraph();
         }
@@ -309,6 +347,16 @@ public class SFEngine extends Application  {
             v.setCenterX(centre.getX() + Math.cos(rad) * radius);
             v.setCenterY(centre.getY() + Math.sin(rad) * radius);
             rad+=turn;
+        }
+        placeAllEdges();
+    }
+
+    private void placeAllEdges() {
+        for(Edge e : edges) {
+            e.setStartX(vertices.get(e.v1).getCenterX());
+            e.setStartY(vertices.get(e.v1).getCenterY());
+            e.setEndX(vertices.get(e.v2).getCenterX());
+            e.setEndY(vertices.get(e.v2).getCenterY());
         }
     }
 }
