@@ -60,15 +60,15 @@ public class SFEngine extends Application  {
         stage.show();
         newEdge = null;
         root.setOnMouseClicked(e -> {
-            if(isEdgeCreation(e)) {
+            if(isEdgeCreation(e) || newEdge != null) {
                 checkFinishEdge(e);
             }
         });
-        root.setOnMouseReleased(e -> {
-            if(newEdge != null) {
-                checkFinishEdge(e);
-            }
-        });
+//        root.setOnMouseReleased(e -> {
+//            if(newEdge != null) {
+//                checkFinishEdge(e);
+//            }
+//        });
         root.setOnMouseMoved(e -> {
            if(newEdge != null) {
                newEdge.setEndX(e.getX());
@@ -103,16 +103,40 @@ public class SFEngine extends Application  {
 
     private void analyzeGraph() {
         int numComponents = m.numComponents();
+        int[] save = m.getDegree();
         int[] tough = m.isTough();
-        hud.setText("Components: " + numComponents +"\nTough: " +
+//        System.out.println(Arrays.toString(save) + " -> " + Arrays.toString(m.getDegree()));
+//        int[] tough = null;
+        int[] eulerian = m.isEulerian();
+        hud.setText("Components: " + numComponents
+                +"\nTough: " +
                 (numComponents == 1 ? (tough == null ? "True" :
-                        ("False, Breaking Set: " + Arrays.toString(tough))) : "False (Disconnected)"));
+                        ("False, Breaking Set: " + Arrays.toString(tough))) : "False (Disconnected)")
+                +"\nEulerian: " + (eulerian == null ? "True" : ((numComponents == 1 ? Arrays.toString(eulerian) : "False (Disconnected)")))
+        );
         colorGroupVertices(m, numComponents);
+        for(Vertex v : vertices) {
+            v.setStroke(Color.TRANSPARENT);
+        }
         if(tough != null && numComponents == 1) {
             for(int i = 0; i < tough.length; i++) {
                 vertices.get(tough[i]).setStroke(Color.BLACK);
             }
         }
+    }
+
+    //this sucks. idrc
+    private int[] nonEulerianSet() {
+        int[] out = new int[m.getOrder()];
+        int num = 0;
+        for(int i = 0; i < m.getOrder(); i++) {
+            if(m.getDegree(i)%2 != 0) {
+                out[num++] = i;
+            }
+        }
+        int[] fin = new int[num];
+        System.arraycopy(out, 0, fin, 0, num);
+        return fin;
     }
 
     private void checkFinishEdge(MouseEvent e) {
@@ -137,6 +161,8 @@ public class SFEngine extends Application  {
                             root.getChildren().add(ed);
                             ed.setViewOrder(EDGE_Z);
                             m.putEdge(newEdgeV, i);
+//                            System.out.println("Created edge between " + i +" and " + newEdgeV);
+//                            System.out.println(m.toString(true));
                             analyzeGraph();
                         }
                     }
@@ -212,6 +238,7 @@ public class SFEngine extends Application  {
                     for(Edge d : edges) {
                         if(d.v1 == this.id || d.v2 == this.id) {
                             d.remove();
+                            System.out.println("Nonfunctional, undefined behavior ahead");
                         }
                     }
                     //todo: matrix.remove(this), need to add a Map<int vertexName - > vertexId (in array) so removing vertices doesnt fuck up shit on gui

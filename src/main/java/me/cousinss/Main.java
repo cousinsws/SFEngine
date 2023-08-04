@@ -13,8 +13,8 @@ public class Main {
 //        m.putEdge(3, 1);
 //        m.putEdge(0, 2);
         System.out.println(m);
-        System.out.println("The graph is Eulerian: " + m.isEulerian(false));
-        System.out.println("The graph has an Eulerian Path: " + m.isEulerian(true));
+        System.out.println("The graph is Eulerian: " + Arrays.toString(m.isEulerian()));
+        System.out.println("The graph has an Eulerian Path: " + m.hasEulerianPath());
         System.out.println("The graph is connected: " + m.isConnected());
         int components = m.numComponents();
         System.out.println("The graph has: " + components + " components");

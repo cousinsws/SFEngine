@@ -116,24 +116,47 @@ public class MatrixGraph {
         return out;
     }
 
+    public int getDegree(int v) {
+        if(v < 0 || v >= this.order) {
+            return -1;
+        }
+        return this.degree[v];
+    }
+
     /**
      * Whether the graph is Eulerian.
-     * @param path if an Eulerian path, rather than strictly an Eulerian cycle, is permitted.
-     * @return {@code true} if the graph is Eulerian to the given specification, {@code false} otherwise.
+     * @return {@code true} if the graph is Eulerian, {@code false} otherwise.
      */
-    public boolean isEulerian(boolean path) {
-        int numOdd = 0;
-        System.out.println(Arrays.toString(degree));
+    public int[] isEulerian() {
+        ArrayList<Integer> out = new ArrayList<>();
         for(int i = 0; i < order; i++) {
             if(degree[i] % 2 != 0) {
-                if (path && numOdd < 2) {
+//                System.out.println(i + " has noneven degree " + degree[i]);
+                out.add(i);
+            }
+        }
+        if(!isConnected(true) || out.size() == 0) {
+            return null;
+        }
+        int[] outA = new int[out.size()];
+        for(int i = 0; i < out.size(); i++) {
+            outA[i] = out.get(i);
+        }
+        return outA;
+    }
+
+    public boolean hasEulerianPath() {
+        int numOdd = 0;
+        for(int i = 0; i < order; i++) {
+            if(degree[i] % 2 != 0) {
+                if (numOdd < 2) {
                     numOdd++;
                 } else {
                     return false;
                 }
             }
         }
-        return (path ? numOdd == 0 || numOdd == 2 : true) && isConnected(true);
+        return numOdd == 0 || numOdd == 2;
     }
 
     public boolean isConnected() {
@@ -160,7 +183,7 @@ public class MatrixGraph {
         for(int i = 0; i < order; i++) {
             if(visited[i] == false) {
                 if(!(degree[i] == 0 && allowDots)) {
-                    System.out.println("Vertex " + i + " was disconnected from " + seed + " and was irredeemable as a dot.");
+//                    System.out.println("Vertex " + i + " was disconnected from " + seed + " and was irredeemable as a dot.");
                     return false;
                 }
             }
@@ -205,6 +228,8 @@ public class MatrixGraph {
             for(int i = 0; i < num; i++) {
                 saveRemoved[i] = new int[degree[removing[i]]];
             }
+//            int[][] save = matrixCopy(mat); //TODO remove
+//            int[] saveD = Arrays.copyOf(degree, degree.length);
             for (int id = 0; id < num; id++) {
                 int n = 0;
                 for (int x = 0; x < order; x++) {
@@ -216,6 +241,9 @@ public class MatrixGraph {
                         degree[x]--;
                     }
                 }
+                for(; n < saveRemoved[id].length; n++) {
+                    saveRemoved[id][n] = -1;
+                }
             }
             boolean notTough = numComponents()-num > num;
 //            System.out.println("Was tough when removing: " + !notTough + " (" + (numComponents()-num) + "?>" + num+")");
@@ -224,9 +252,22 @@ public class MatrixGraph {
             //repair them
             for (int id = 0; id < num; id++) {
                 for (int x = 0; x < saveRemoved[id].length; x++) {
+                    if(saveRemoved[id][x] == -1) {
+                        break;
+                    }
                     putEdge(removing[id], saveRemoved[id][x]);
                 }
             }
+//            if(!equal(save, mat)) {
+//                System.out.println(arrayDeepString(save));
+//                System.out.println(arrayDeepString(mat));
+//                System.out.println("Was removing: " + Arrays.toString(removing));
+//                System.out.println(Arrays.deepToString(saveRemoved));
+//            }
+//            if(!equal(saveD, degree)) {
+//                System.out.println(Arrays.toString(saveD));
+//                System.out.println(Arrays.toString(degree));
+//            }
             return notTough ? removing : null;
         } else {
             for(int i = (l == 0 ? 0 : removing[l-1]+1); i < order; i++) {
@@ -240,7 +281,44 @@ public class MatrixGraph {
         }
     }
 
+    private boolean equal(int[][] m1, int[][] m2) {
+        if(m1.length != m2.length) {
+            return false;
+        }
+        for(int i = 0; i < m1.length; i++) {
+            if(m1[i].length != m2[i].length) {
+                return false;
+            }
+            for(int j = 0; j < m1[i].length; j++) {
+                if(m1[i][j] != m2[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
+    private boolean equal(int[] m1, int[] m2) {
+        if(m1.length != m2.length) {
+            return false;
+        }
+        for(int i = 0; i < m1.length; i++) {
+            if(m1[i] != m2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private int[][] matrixCopy(int[][] m) {
+        int[][] out = new int[m.length][m[0].length];
+        for(int i =0; i < m.length; i++) {
+            for(int j = 0; j < m[0].length; j++) {
+                out[i][j] = m[i][j];
+            }
+        }
+        return out;
+    }
 
     public int numComponents() {
         //the number of components of a graph given an n-by-n adjacency matrix is equal to the multiplicity of the eigenvalue 0
@@ -310,13 +388,10 @@ public class MatrixGraph {
     }
 
     public String toString(boolean list) {
-        String out = "";
         if(!list) {
-            for(int i = 0; i < this.order; i++) {
-                out+=Arrays.toString(mat[i]) + (i == this.order - 1 ? "" : ",\n");
-            }
-            return out;
+            return arrayDeepString(mat);
         }
+        String out = "";
         ArrayList<Integer>[] lists = new ArrayList[this.order];
         for(int i = 0; i < this.order; i++) {
             lists[i] = new ArrayList<Integer>();
@@ -326,6 +401,14 @@ public class MatrixGraph {
                 }
             }
             out += "(" + i + ") " + lists[i].toString() + (i == this.order - 1 ? "" : ",\n");
+        }
+        return out;
+    }
+
+    private String arrayDeepString(int[][] mat) {
+        String out = "";
+        for(int i = 0; i < this.order; i++) {
+            out+=Arrays.toString(mat[i]) + (i == this.order - 1 ? "" : ",\n");
         }
         return out;
     }
