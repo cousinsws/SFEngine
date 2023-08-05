@@ -5,8 +5,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
@@ -46,6 +45,8 @@ public class SFEngine extends Application  {
     private int newEdgeV;
 
     private MatrixGraph m;
+    private double mouseX = 0;
+    private double mouseY = 0;
 
     @Override
     public void start(Stage stage) {
@@ -53,6 +54,17 @@ public class SFEngine extends Application  {
         root = new BorderPane();
         hud = new Text("Components: 1\nTough: False");
         root.setTop(hud);
+        root.setBottom(new Text(
+                "[Click and Drag] to move vertices\n" +
+                        "[Right Click] to create a new edge\n" +
+                        "[Control + Click] to delete an edge or vertex\n" +
+                        "[Space] to create a vertex\n" +
+                        "[Scroll] to change size\n" +
+                        "[Scroll + Shift] to change size for all vertices\n" +
+                        "[R] to arrange radially"
+
+        ));
+        root.setBorder(new Border(new BorderStroke(Color.WHITE, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.FULL)));
         Scene scene = new Scene(root, 600, 600);
         stage.setScene(scene);
         stage.show();
@@ -72,22 +84,24 @@ public class SFEngine extends Application  {
                newEdge.setEndX(e.getX());
                newEdge.setEndY(e.getY());
            }
+           this.mouseX = e.getX();
+           this.mouseY = e.getY();
         });
         scene.setOnKeyPressed(this::onType);
         scene.setOnScroll(this::onScroll);
-        m = new MatrixGraph(10);
+        m = new MatrixGraph(8);
         vertices = new ArrayList<>();
         edges = new LinkedHashSet<>();
         for(int i = 0; i < m.getOrder(); i++) {
             vertices.add(new Vertex(0, 0, ""+i, i));
         }
         arrangeRadially(vertices, new Point2D(300, 300), 100);
-        for(int i = 0; i < m.getOrder(); i++) {
-            int rand = i;
-            while((rand = ((int) (Math.random() * m.getOrder()))) == i) {}
-            edges.add(new Edge(i, rand));
-//            edges.add(new Edge(i, (int)(Math.random()*10)));
-        }
+//        for(int i = 0; i < m.getOrder(); i++) {
+//            int rand = i;
+//            while((rand = ((int) (Math.random() * m.getOrder()))) == i) {}
+//            edges.add(new Edge(i, rand));
+////            edges.add(new Edge(i, (int)(Math.random()*10)));
+//        }
         for(Edge e : edges) {
             root.getChildren().add(e);
             e.setViewOrder(EDGE_Z);
@@ -105,6 +119,12 @@ public class SFEngine extends Application  {
     private void onType(KeyEvent e) {
         if(e.getCode() == KeyCode.R) {
             arrangeRadially(vertices, new Point2D(root.getWidth() / 2, root.getHeight()/2), Math.min(root.getWidth(), root.getHeight())/3.5);
+        } else if(e.getCode() == KeyCode.SPACE) {
+            m.addVertex();
+            Vertex v = new Vertex(mouseX, mouseY, ""+vertices.size(), vertices.size());
+            vertices.add(v);
+            root.getChildren().add(v);
+            analyzeGraph();
         }
     }
 
@@ -140,7 +160,7 @@ public class SFEngine extends Application  {
                 +"\nTough: " +
                     (numComponents == 1 ? (tough == null ? "True" :
                     ("False, Breaking Set: " + Arrays.toString(tough))) : "False (Disconnected)")
-                +"\nEulerian: " + (eulerian == null ? "True" : ((numComponents == 1 ? Arrays.toString(eulerian) : "False (Disconnected)")))
+                +"\nEulerian: " + (eulerian == null ? "True" : ("False, Odd-Degreed Set: " + Arrays.toString(eulerian)))
         );
         colorGroupVertices(m, numComponents);
         for(Vertex v : vertices) {
@@ -262,16 +282,38 @@ public class SFEngine extends Application  {
             });
             this.setOnMouseClicked(e -> {
                 if(e.isControlDown()) {
-                    ((Pane) this.getParent()).getChildren().remove(this);
-                    for(Edge d : edges) {
-                        if(d.v1 == this.id || d.v2 == this.id) {
-                            d.remove();
-                            System.out.println("Nonfunctional, undefined behavior ahead");
-                        }
-                    }
-                    //todo: matrix.remove(this), need to add a Map<int vertexName - > vertexId (in array) so removing vertices doesnt fuck up shit on gui
+                    System.out.println("[WIP] Vertex deletion is currently not enabled.");
+//                    ((Pane) this.getParent()).getChildren().remove(this);
+//                    removeVertex(id);
                 }
             });
+        }
+
+        private void removeVertex(int id) {
+            for(Edge d : edges) {
+                if(d.v1 == this.id || d.v2 == this.id) {
+                    d.remove();
+                }
+            }
+            for(Edge d : edges) {
+                if(d.v1 > id) {
+                    d.v1-=1;
+                }
+                if(d.v2 > id) {
+                    d.v2-=1;
+                }
+            }
+            for(Vertex v : vertices) {
+                if(v.id > id) {
+                    v.id--;
+                }
+            }
+            vertices.remove(id);
+            m = new MatrixGraph(vertices.size()-1);
+            for(Edge d : edges) {
+                m.putEdge(d.v1, d.v2);
+            }
+            analyzeGraph();
         }
 
         public void setRadius(double rad) {

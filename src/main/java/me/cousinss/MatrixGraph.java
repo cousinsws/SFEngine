@@ -63,9 +63,9 @@ public class MatrixGraph {
      */
     public boolean addVertex(int numVertices) {
         if(order + numVertices >= mat.length) {
-            resizeMatrix(mat, order + numVertices);
+            this.mat = resizeMatrix(mat, order + numVertices);
             int[] degTemp = new int[order + numVertices];
-            System.arraycopy(degree, 0, degTemp, 0, order + numVertices);
+            System.arraycopy(degree, 0, degTemp, 0, order);
             degree = degTemp;
         }
         order += numVertices;
@@ -149,8 +149,11 @@ public class MatrixGraph {
                 out.add(i);
             }
         }
-        if(!isConnected(true) || out.size() == 0) {
+        if(out.size() == 0) {
             return null;
+        }
+        if(!isConnected(true)) {
+            return new int[] {-1};
         }
         int[] outA = new int[out.size()];
         for(int i = 0; i < out.size(); i++) {
@@ -181,7 +184,7 @@ public class MatrixGraph {
         if(order == 0) {
             return true;
         }
-        int seed = 0;
+        int seed = -1;
         if(allowDots) {
             for (int i = 0; i < order; i++) {
                 if (degree[i] > 0) {
@@ -189,6 +192,12 @@ public class MatrixGraph {
                     break;
                 }
             }
+            if(seed == -1) {
+                return true;
+            }
+        }
+        else {
+            seed = 0;
         }
         boolean[] visited = new boolean[order];
         dfsUtil(seed, visited);
