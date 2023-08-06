@@ -12,6 +12,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.time.Instant;
 import java.util.*;
 
 public class SFEngine extends Application  {
@@ -61,8 +62,8 @@ public class SFEngine extends Application  {
                         "[Space] to create a vertex\n" +
                         "[Scroll] to change size\n" +
                         "[Scroll + Shift] to change size for all vertices\n" +
-                        "[R] to arrange radially"
-
+                        "[R] to arrange radially\n" +
+                        "[P] to print all data to console for save"
         ));
         root.setBorder(new Border(new BorderStroke(Color.WHITE, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.FULL)));
         Scene scene = new Scene(root, 600, 600);
@@ -125,6 +126,15 @@ public class SFEngine extends Application  {
             vertices.add(v);
             root.getChildren().add(v);
             analyzeGraph();
+        } else if(e.getCode() == KeyCode.P) {
+            System.out.println("Graph Data Save @ (" + Date.from(Instant.now()) + ")");
+            System.out.println(hud.getText());
+            System.out.println("Adjacency Matrix:\n" + m.toString(false));
+            System.out.println("Adjacency List:\n" + m.toString(true));
+            int[] deg = Arrays.copyOf(m.getDegree(), m.getOrder());
+            System.out.println("Degrees (By ID):\n" + Arrays.toString(deg));
+            Arrays.sort(deg);
+            System.out.println("Degree Sequence (Sorted):\n" + Arrays.toString(deg));
         }
     }
 

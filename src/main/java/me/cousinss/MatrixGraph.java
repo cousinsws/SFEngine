@@ -407,7 +407,7 @@ public class MatrixGraph {
 
     public String toString(boolean list) {
         if(!list) {
-            return arrayDeepString(mat);
+            return arrayDeepString(mat, order, order);
         }
         String out = "";
         ArrayList<Integer>[] lists = new ArrayList[this.order];
@@ -427,6 +427,14 @@ public class MatrixGraph {
         String out = "";
         for(int i = 0; i < this.order; i++) {
             out+=Arrays.toString(mat[i]) + (i == this.order - 1 ? "" : ",\n");
+        }
+        return out;
+    }
+
+    private String arrayDeepString(int[][] mat, int w, int h) {
+        String out = "";
+        for(int i = 0; i < h; i++) {
+            out+=Arrays.toString(Arrays.copyOf(mat[i], w)) + (i == this.order - 1 ? "" : ",\n");
         }
         return out;
     }
